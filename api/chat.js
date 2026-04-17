@@ -1,6 +1,9 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// api/chat.js
+import { Groq } from 'groq-sdk';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const groq = new Groq({
+    apiKey: process.env.GROQ_API_KEY,
+});
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -13,10 +16,19 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Message is required' });
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-        const result = await model.generateContent(message);
-        const reply = await result.response.text();
+        const chatCompletion = await groq.chat.completions.create({
+            "messages": [
+                {
+                    "role": "user",
+                    "content": message
+                }
+            ],
+            "model": "llama3-8b-8192",
+            "temperature": 0.7,
+            "max_tokens": 1024,
+        });
 
+        const reply = chatCompletion.choices[0]?.message?.content || "Извините, не могу ответить.";
         res.status(200).json({ reply });
     } catch (error) {
         console.error('Error generating content:', error);
