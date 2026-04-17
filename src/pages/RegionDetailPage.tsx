@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { regionsData } from '../data/regionsData';
 
@@ -6,6 +6,11 @@ const RegionDetailPage: React.FC = () => {
     const { regionId } = useParams<{ regionId: string }>();
     const navigate = useNavigate();
     const region = regionId ? regionsData[regionId] : null;
+
+    // Принудительная прокрутка в начало страницы при загрузке
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
 
     if (!region) {
         return <div className="container mx-auto p-8 text-center text-gray-300">Облус табылган жок</div>;
