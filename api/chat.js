@@ -1,10 +1,10 @@
-// api/chat/route.js
+// api/chat.js
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-export default async function handler(req, res) {
-    // Разрешаем только POST
+module.exports = async (req, res) => {
+    // Убедимся, что метод POST
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -24,4 +24,4 @@ export default async function handler(req, res) {
         console.error('Error generating content:', error);
         res.status(500).json({ error: 'Failed to generate response from AI' });
     }
-}
+};
