@@ -12,7 +12,10 @@ const AIChatPage: React.FC = () => {
     ]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [selectedRegion, setSelectedRegion] = useState('Чүй');
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const regions = ['Чүй', 'Ысык-Көл', 'Ош', 'Жалал-Абад', 'Нарын', 'Талас', 'Баткен', 'Бишкек'];
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -29,22 +32,24 @@ const AIChatPage: React.FC = () => {
         setMessages(prev => [...prev, { text: userMsg, isUser: true }]);
         setInput('');
         setIsLoading(true);
-
-        // Добавляем временное сообщение "печатает..."
         setMessages(prev => [...prev, { text: '...', isUser: false }]);
 
         try {
-            // Отправляем запрос к вашему новому бэкенду
-            const response = await axios.post('/api/chat', {
-                message: userMsg,
-                conversationHistory: messages.filter(m => m.text !== '...').map(m => ({
+            // Отправляем запрос с регионом и историей
+            const historyForAPI = messages
+                .filter(m => m.text !== '...')
+                .map(m => ({
                     role: m.isUser ? 'user' : 'model',
                     content: m.text
-                }))
+                }));
+
+            const response = await axios.post('/api/chat', {
+                message: userMsg,
+                conversationHistory: historyForAPI,
+                region: selectedRegion   // передаём выбранный регион
             });
             const aiReply = response.data.reply;
 
-            // Заменяем временное сообщение на ответ от Gemini
             setMessages(prev => {
                 const newMessages = [...prev];
                 newMessages[newMessages.length - 1] = { text: aiReply, isUser: false };
@@ -70,6 +75,20 @@ const AIChatPage: React.FC = () => {
                 </h1>
                 <p className="text-gray-400">Айыл чарба боюнча суроолоруңузга жооп берейин</p>
             </div>
+
+            {/* Выпадающий список регионов для получения погодных рекомендаций */}
+            <div className="flex justify-center mb-4">
+                <select
+                    value={selectedRegion}
+                    onChange={(e) => setSelectedRegion(e.target.value)}
+                    className="bg-gray-700 text-white px-4 py-2 rounded-full border border-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                    {regions.map(region => (
+                        <option key={region} value={region}>{region} облусу / шаары</option>
+                    ))}
+                </select>
+            </div>
+
             <div className="bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
                 <div className="h-96 overflow-y-auto p-4 bg-gray-900 flex flex-col gap-3">
                     {messages.map((msg, idx) => (
