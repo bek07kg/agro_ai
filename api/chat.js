@@ -34,7 +34,7 @@ export default async function handler(req, res) {
 
         const completion = await groq.chat.completions.create({
             messages,
-            model: 'llama-3.3-70b-versatile',
+            model: 'llama-3.1-8b-instant',
             temperature: 0.7,
             max_tokens: 1024,
         });

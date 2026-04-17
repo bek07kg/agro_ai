@@ -9,6 +9,9 @@ import WeatherSms from '../components/WeatherSms';
 import GeoPanel from '../components/GeoPanel';
 import axios from 'axios';
 
+// Кэш для погоды (простой объект, живёт в памяти страницы)
+const weatherCache: Record<string, any> = {};
+
 // Фикс иконок Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -34,13 +37,19 @@ function MapResizeHandler() {
     return null;
 }
 
-// Функция для получения погоды через WeatherAPI.com
+// Функция получения погоды через WeatherAPI.com (с кэшем)
 async function fetchWeather(lat: number, lon: number) {
+    const cacheKey = `${lat.toFixed(2)},${lon.toFixed(2)}`;
+    if (weatherCache[cacheKey] && Date.now() - weatherCache[cacheKey].timestamp < 5 * 60 * 1000) {
+        console.log('Возвращаем погоду из кэша');
+        return weatherCache[cacheKey].data;
+    }
     const url = `/api/weather?lat=${lat}&lon=${lon}`;
     try {
         const response = await fetch(url);
         const data = await response.json();
         if (response.ok && data.temp !== undefined) {
+            weatherCache[cacheKey] = { data, timestamp: Date.now() };
             return data;
         } else {
             console.error('Weather API error:', data);
@@ -52,7 +61,7 @@ async function fetchWeather(lat: number, lon: number) {
     }
 }
 
-// Функция для получения AI-совета через ваш /api/chat
+// Функция получения AI-совета (через ваш /api/chat)
 async function getAIAdvice(regionName: string, weather: any) {
     const prompt = `${regionName} аймагында аба ырайы: температура ${weather.temp}°C, нымдуулук ${weather.humidity}%, шамал ${weather.wind_speed} м/с, ${weather.description}. Айыл чарба иштери үчүн кеңеш бер.`;
     try {
@@ -100,6 +109,8 @@ const HomePage: React.FC = () => {
     const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
     const [currentWeatherData, setCurrentWeatherData] = useState<any>(null);
     const [currentAIAdvice, setCurrentAIAdvice] = useState<string | null>(null);
+    const [isWeatherLoading, setIsWeatherLoading] = useState(false);
+    const [isAIAdviceLoading, setIsAIAdviceLoading] = useState(false);
 
     const handleRegionClick = async (regionId: string) => {
         const region = regionsData[regionId];
@@ -111,25 +122,34 @@ const HomePage: React.FC = () => {
             return;
         }
 
-        // Получаем погоду через WeatherAPI.com
+        setSelectedRegionId(regionId);
+        setCurrentWeatherData(null);
+        setCurrentAIAdvice(null);
+        setIsWeatherLoading(true);
+        setIsAIAdviceLoading(true);
+
+        // 1. Запрашиваем погоду (с кэшем)
         const weather = await fetchWeather(coords.lat, coords.lon);
+        setIsWeatherLoading(false);
         if (!weather) {
             setSms({ message: `Кечиресиз, ${region.name} үчүн аба ырайын алуу мүмкүн болбой калды.`, type: 'info' });
+            setIsAIAdviceLoading(false);
             return;
         }
 
-        // Получаем AI-совет
-        const advice = await getAIAdvice(region.name, weather);
         setCurrentWeatherData(weather);
-        setCurrentAIAdvice(advice);
-
-        // SMS-уведомление
+        // Показываем SMS с погодой (без AI-совета) сразу
         const smsType = weather.temp > 28 ? 'hot' : weather.temp < 5 ? 'cold' : 'info';
-        const smsText = `🌾 ${region.name}\n${weather.temp}°C, ${weather.description}\n🤖 AI кеңеши: ${advice}`;
+        const smsText = `🌾 ${region.name}\n${weather.temp}°C, ${weather.description}`;
         setSms({ message: smsText, type: smsType });
 
-        setSelectedRegionId(regionId);
-        // Не переходим на страницу региона (остаёмся на главной)
+        // 2. Асинхронно получаем AI-совет (не блокируем интерфейс)
+        const advice = await getAIAdvice(region.name, weather);
+        setIsAIAdviceLoading(false);
+        setCurrentAIAdvice(advice);
+        // Обновляем SMS, добавляя AI-совет
+        const smsTextWithAdvice = `🌾 ${region.name}\n${weather.temp}°C, ${weather.description}\n🤖 AI кеңеши: ${advice}`;
+        setSms({ message: smsTextWithAdvice, type: smsType });
     };
 
     const handleGeolocation = () => {
@@ -237,8 +257,9 @@ const HomePage: React.FC = () => {
                             currentRegion={currentRegion}
                             currentWeather={currentWeatherData}
                             aiAdvice={currentAIAdvice}
+                            isWeatherLoading={isWeatherLoading}
+                            isAIAdviceLoading={isAIAdviceLoading}
                             onRegionSelect={(regionId) => {
-                                // При клике на кнопку облуса переходим на страницу региона
                                 navigate(`/region/${regionId}`);
                             }}
                             regionsList={regionsList}
