@@ -35,7 +35,13 @@ const AIChatPage: React.FC = () => {
 
         try {
             // Отправляем запрос к вашему новому бэкенду
-            const response = await axios.post('/api/chat', { message: userMsg });
+            const response = await axios.post('/api/chat', {
+                message: userMsg,
+                conversationHistory: messages.filter(m => m.text !== '...').map(m => ({
+                    role: m.isUser ? 'user' : 'model',
+                    content: m.text
+                }))
+            });
             const aiReply = response.data.reply;
 
             // Заменяем временное сообщение на ответ от Gemini
