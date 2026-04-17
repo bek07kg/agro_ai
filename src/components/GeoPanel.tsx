@@ -3,7 +3,8 @@ import { regionsList as defaultRegionsList } from '../data/regionsData';
 
 interface GeoPanelProps {
     currentRegion: any;
-    currentWeather: any;
+    currentWeather?: any;
+    aiAdvice?: string | null;
     onRegionSelect: (regionId: string) => void;
     regionsList?: { id: string; name: string; icon: string }[];
 }
@@ -11,6 +12,7 @@ interface GeoPanelProps {
 const GeoPanel: React.FC<GeoPanelProps> = ({
     currentRegion,
     currentWeather,
+    aiAdvice,
     onRegionSelect,
     regionsList = defaultRegionsList
 }) => {
@@ -25,10 +27,19 @@ const GeoPanel: React.FC<GeoPanelProps> = ({
                         <i className="fas fa-map-pin text-green-400 w-6"></i><strong>Аймак:</strong> {currentRegion.name}
                     </div>
                     <div className="flex items-center gap-3 py-2 border-b border-gray-700">
-                        <i className="fas fa-temperature-high text-green-400 w-6"></i><strong>Аба ырайы:</strong> {currentWeather?.temp}°C, {currentWeather?.condition}
+                        <i className="fas fa-temperature-high text-green-400 w-6"></i><strong>Аба ырайы:</strong> {currentWeather?.temp}°C, {currentWeather?.description || currentWeather?.condition}
                     </div>
+                    {currentWeather?.icon && (
+                        <div className="flex items-center gap-3 py-2 border-b border-gray-700">
+                            <i className="fas fa-cloud-sun text-green-400 w-6"></i>
+                            <img src={`https:${currentWeather.icon}`} alt="погода" className="w-8 h-8" />
+                        </div>
+                    )}
                     <div className="flex items-center gap-3 py-2 border-b border-gray-700">
                         <i className="fas fa-tint text-green-400 w-6"></i><strong>Нымдуулук:</strong> {currentWeather?.humidity}%
+                    </div>
+                    <div className="flex items-center gap-3 py-2 border-b border-gray-700">
+                        <i className="fas fa-wind text-green-400 w-6"></i><strong>Шамал:</strong> {currentWeather?.wind_speed} км/с
                     </div>
                     <div className="flex items-center gap-3 py-2 border-b border-gray-700">
                         <i className="fas fa-mountain text-green-400 w-6"></i><strong>Топурак:</strong> {currentRegion.soil}
@@ -39,6 +50,11 @@ const GeoPanel: React.FC<GeoPanelProps> = ({
                     <div className="bg-gray-700 p-3 rounded-xl mt-3 flex items-center gap-2 text-green-300">
                         <i className="fas fa-robot text-green-400"></i> 🤖 AI сунуш: {currentRegion.aiTip}
                     </div>
+                    {aiAdvice && (
+                        <div className="bg-green-900/30 p-3 rounded-xl mt-3 border-l-4 border-green-400">
+                            <i className="fas fa-robot text-green-400 mr-2"></i> 🤖 AI кеңеш (аба ырайына карата): {aiAdvice}
+                        </div>
+                    )}
                 </>
             ) : (
                 <p className="text-gray-400">Картадан облусту басыңыз</p>
